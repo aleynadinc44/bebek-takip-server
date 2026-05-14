@@ -12,23 +12,17 @@ let espSocket = null;
 let flutterSockets = new Set();
 
 wss.on('connection', (ws, req) => {
-    // Bağlantının URL'ine göre cihazı veya uygulamayı ayırt ediyoruz
     const url = req.url;
-
     if (url === '/esp32') {
         console.log('Kamera (ESP32) buluta bağlandı.');
         espSocket = ws;
-        
-        // ESP32'den gelen saf resim verisini (binary) yakala
         ws.on('message', (message) => {
-            // Hiç bekletmeden bağlı olan tüm Flutter uygulamalarına gönder
             flutterSockets.forEach(client => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(message); 
                 }
             });
         });
-
         ws.on('close', () => {
             console.log('Kamera bağlantısı koptu.');
             espSocket = null;
@@ -37,7 +31,6 @@ wss.on('connection', (ws, req) => {
     else if (url === '/flutter') {
         console.log('Uygulama (Flutter) buluta bağlandı.');
         flutterSockets.add(ws);
-
         ws.on('close', () => {
             console.log('Uygulama ayrıldı.');
             flutterSockets.delete(ws);
