@@ -1,0 +1,12 @@
+{
+  "name": "bebek-takip-server",
+  "version": "1.0.0",
+  "description": "Bebek Takip WebSocket Sunucusu",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
