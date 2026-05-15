@@ -12,8 +12,10 @@ const server = http.createServer((req, res) => {
             const ws = new WebSocket('wss://bebek-takip-server.onrender.com/flutter');
             ws.binaryType = 'blob';
             ws.onmessage = (e) => {
-              const url = URL.createObjectURL(e.data);
-              document.getElementById('cam').src = url;
+              if (e.data instanceof Blob) {
+                const url = URL.createObjectURL(e.data);
+                document.getElementById('cam').src = url;
+              }
             };
           </script>
         </body>
@@ -36,6 +38,8 @@ wss.on('connection', (ws, req) => {
   if (url === '/esp32') {
     console.log('Kamera (ESP32) buluta bağlandı.');
     espSocket = ws;
+
+    // ESP32'den gelen görüntüleri tüm Flutter istemcilerine gönder
     ws.on('message', (message) => {
       flutterSockets.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
@@ -43,13 +47,24 @@ wss.on('connection', (ws, req) => {
         }
       });
     });
+
     ws.on('close', () => {
       console.log('Kamera bağlantısı koptu.');
       espSocket = null;
     });
+
   } else if (url === '/flutter') {
     console.log('Uygulama (Flutter) buluta bağlandı.');
     flutterSockets.add(ws);
+
+    // Flutter'dan gelen komutları ESP32'ye ilet
+    ws.on('message', (message) => {
+      if (espSocket && espSocket.readyState === WebSocket.OPEN) {
+        espSocket.send(message);
+        console.log('Flutter komutu ESP32ye iletildi:', message.toString());
+      }
+    });
+
     ws.on('close', () => {
       console.log('Uygulama ayrıldı.');
       flutterSockets.delete(ws);
