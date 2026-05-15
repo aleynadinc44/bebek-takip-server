@@ -31,7 +31,7 @@ const wss = new WebSocket.Server({ server });
 
 let espSocket = null;
 let flutterSockets = new Set();
-let cameraEnabled = true; // Sunucu tarafı kamera durumu
+let cameraEnabled = false; // Sunucu tarafı kamera durumu
 
 wss.on('connection', (ws, req) => {
   const url = req.url;
