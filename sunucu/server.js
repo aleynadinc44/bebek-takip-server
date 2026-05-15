@@ -31,6 +31,7 @@ const wss = new WebSocket.Server({ server });
 
 let espSocket = null;
 let flutterSockets = new Set();
+let cameraEnabled = true; // Sunucu tarafı kamera durumu
 
 wss.on('connection', (ws, req) => {
   const url = req.url;
@@ -39,8 +40,10 @@ wss.on('connection', (ws, req) => {
     console.log('Kamera (ESP32) buluta bağlandı.');
     espSocket = ws;
 
-    // ESP32'den gelen görüntüleri tüm Flutter istemcilerine gönder
+    // ESP32'den gelen frame'leri ilet — sadece kamera açıksa
     ws.on('message', (message) => {
+      if (!cameraEnabled) return;
+
       flutterSockets.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message);
@@ -57,11 +60,26 @@ wss.on('connection', (ws, req) => {
     console.log('Uygulama (Flutter) buluta bağlandı.');
     flutterSockets.add(ws);
 
-    // Flutter'dan gelen komutları ESP32'ye ilet
+    // Flutter'dan gelen komutları işle ve ESP32'ye ilet
     ws.on('message', (message) => {
+      const msg = message.toString();
+
+      try {
+        const json = JSON.parse(msg);
+
+        // Kamera aç/kapat komutu
+        if (typeof json.cameraEnabled === 'boolean') {
+          cameraEnabled = json.cameraEnabled;
+          console.log(`[KOMUT] Kamera durumu: ${cameraEnabled ? 'AÇIK' : 'KAPALI'}`);
+        }
+      } catch (e) {
+        // JSON değilse sessizce geç
+      }
+
+      // Komutu ESP32'ye ilet
       if (espSocket && espSocket.readyState === WebSocket.OPEN) {
-        espSocket.send(message);
-        console.log('Flutter komutu ESP32ye iletildi:', message.toString());
+        espSocket.send(msg);
+        console.log('[ESP32] Komut iletildi:', msg);
       }
     });
 
